@@ -6,12 +6,14 @@ export default function Home() {
   const [userCount, setUserCount] = useState(0);
 
   useEffect(() => {
-    async function fetchCount() {
-      const count = await getTotalUserCount();
-      setUserCount(count);
-    }
-    fetchCount();
-  }, []);
+  async function fetchCount() {
+    const count = await getTotalUserCount();
+    setUserCount(count);
+  }
+
+  fetchCount();
+}, []);
+
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900 text-center px-4">
       <h1 className="text-3xl md:text-5xl font-bold mb-6 text-gray-800 dark:text-white">
