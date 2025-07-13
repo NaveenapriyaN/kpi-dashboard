@@ -1,7 +1,17 @@
-// src/pages/Home.jsx
+import { useEffect, useState } from "react";
+import { getTotalUserCount } from "../utils/getTotalUserCount";
 import { Link } from "react-router-dom";
 
 export default function Home() {
+  const [userCount, setUserCount] = useState(0);
+
+  useEffect(() => {
+    async function fetchCount() {
+      const count = await getTotalUserCount();
+      setUserCount(count);
+    }
+    fetchCount();
+  }, []);
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900 text-center px-4">
       <h1 className="text-3xl md:text-5xl font-bold mb-6 text-gray-800 dark:text-white">
@@ -9,6 +19,9 @@ export default function Home() {
       </h1>
       <p className="text-gray-600 dark:text-gray-300 mb-8">
         Track your metrics, visualize performance and make data-driven decisions.
+      </p>
+      <p className="text-lg font-medium text-green-700 dark:text-green-300 mb-8">
+         {userCount} users have signed up so far!
       </p>
       <div className="space-x-4">
         <Link

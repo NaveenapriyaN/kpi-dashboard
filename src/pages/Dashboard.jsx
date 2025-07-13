@@ -61,6 +61,11 @@ export default function Dashboard() {
       if (!error) toast.success("KPI updated!");
       setEditingId(null);
     } else {
+      const alreadyExists = data.some((d) => d.month === monthStr);
+      if (alreadyExists) {
+        toast.error("KPI for this month already exists!");
+        return;
+      }
       ({ error } = await supabase.from("metrics").insert(payload));
       if (!error) toast.success("KPI saved!");
     }
@@ -94,7 +99,14 @@ export default function Dashboard() {
       month: entry.month,
     });
     setEditingId(entry.id);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    setTimeout(() => {
+      document.getElementById("kpi-form")?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setForm({ revenue: "", churn_percent: "", dau: "", month: "" });
   };
 
   return (
@@ -102,9 +114,8 @@ export default function Dashboard() {
       <Sidebar />
       <div className="flex-1">
         <Topbar userEmail={user?.email} />
-
         <main className="p-6">
-          {/* KPI Summary */}
+          {/* Summary */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
             <KPIBox label="Revenue (₹)" value={data.at(-1)?.revenue || "—"} color="border-blue-500" />
             <KPIBox label="Churn (%)" value={data.at(-1)?.churn_percent || "—"} color="border-green-500" />
@@ -112,68 +123,54 @@ export default function Dashboard() {
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-10">
-            <input
-              type="month"
-              name="month"
-              className="border p-2 rounded"
-              value={form.month}
-              onChange={handleChange}
-              required
-            />
-            <input
-              type="number"
-              name="revenue"
-              placeholder="Revenue (₹)"
-              className="border p-2 rounded"
-              value={form.revenue}
-              onChange={handleChange}
-              required
-            />
-            <input
-              type="number"
-              name="churn_percent"
-              placeholder="Churn %"
-              className="border p-2 rounded"
-              value={form.churn_percent}
-              onChange={handleChange}
-              required
-            />
-            <input
-              type="number"
-              name="dau"
-              placeholder="DAU"
-              className="border p-2 rounded"
-              value={form.dau}
-              onChange={handleChange}
-              required
-            />
-            <button
-              type="submit"
-              className="bg-blue-600 text-white rounded p-2 hover:bg-blue-700"
-            >
-              {editingId ? "Update KPI" : "Save KPI"}
-            </button>
-          </form>
+          <div
+            id="kpi-form"
+            className={`p-4 border rounded-md shadow-md transition-all mb-10 ${
+              editingId ? "bg-yellow-50 border-yellow-400" : "bg-white"
+            }`}
+          >
+            <h2 className="text-lg font-semibold mb-2">
+              {editingId ? "✏️ Edit KPI Entry" : "➕ Add New KPI"}
+            </h2>
+
+            <form onSubmit={handleSubmit} className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <input type="month" name="month" className="border p-2 rounded" value={form.month} onChange={handleChange} required />
+              <input type="number" name="revenue" placeholder="Revenue (₹)" className="border p-2 rounded" value={form.revenue} onChange={handleChange} required />
+              <input type="number" name="churn_percent" placeholder="Churn %" className="border p-2 rounded" value={form.churn_percent} onChange={handleChange} required />
+              <input type="number" name="dau" placeholder="DAU" className="border p-2 rounded" value={form.dau} onChange={handleChange} required />
+
+              {editingId ? (
+                <div className="flex gap-2 col-span-2 md:col-span-1">
+                  <button type="submit" className="bg-green-600 text-white rounded p-2 w-full hover:bg-green-700">
+                    Update KPI
+                  </button>
+                  <button type="button" onClick={handleCancelEdit} className="bg-gray-300 text-gray-800 rounded p-2 w-full hover:bg-gray-400">
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <button type="submit" className="bg-blue-600 text-white rounded p-2 hover:bg-blue-700" disabled={!form.revenue || !form.churn_percent || !form.dau || !form.month}>
+                  Save KPI
+                </button>
+              )}
+            </form>
+          </div>
 
           {/* Chart */}
           <ResponsiveContainer width="100%" height={300} className="mb-8">
-  <LineChart data={data}>
-    <CartesianGrid strokeDasharray="3 3" />
-    <XAxis
-      dataKey="month"
-      tickFormatter={(m) => {
-        const date = new Date(`${m}-01`);
-        return date.toLocaleString("default", { month: "short", year: "numeric" });
-      }}
-    />
-    <YAxis />
-    <Tooltip />
-    <Legend />
-    <Line type="monotone" dataKey="revenue" stroke="#6366f1" />
-    <Line type="monotone" dataKey="churn_percent" stroke="#22c55e" />
-  </LineChart>
-</ResponsiveContainer>
+            <LineChart data={data}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="month" tickFormatter={(m) => {
+                const date = new Date(`${m}-01`);
+                return date.toLocaleString("default", { month: "short", year: "numeric" });
+              }} />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Line type="monotone" dataKey="revenue" stroke="#6366f1" />
+              <Line type="monotone" dataKey="churn_percent" stroke="#22c55e" />
+            </LineChart>
+          </ResponsiveContainer>
 
           {/* Table */}
           <h2 className="text-xl font-bold mt-10 mb-2">📋 KPI Entries</h2>
@@ -195,16 +192,10 @@ export default function Dashboard() {
                   <td className="p-2">{entry.churn_percent}</td>
                   <td className="p-2">{entry.dau}</td>
                   <td className="p-2 space-x-2">
-                    <button
-                      onClick={() => handleEditTrigger(entry)}
-                      className="text-blue-600 hover:underline"
-                    >
+                    <button onClick={() => handleEditTrigger(entry)} className="text-blue-600 hover:underline">
                       Edit
                     </button>
-                    <button
-                      onClick={() => handleDelete(entry.id)}
-                      className="text-red-600 hover:underline"
-                    >
+                    <button onClick={() => handleDelete(entry.id)} className="text-red-600 hover:underline">
                       Delete
                     </button>
                   </td>
